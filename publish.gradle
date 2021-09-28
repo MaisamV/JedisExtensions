@@ -1,0 +1,57 @@
+apply plugin: "com.jfrog.artifactory"
+apply plugin: 'maven-publish'
+apply plugin: 'maven'
+apply plugin: "java"
+
+def artifactoryUrl = System.getenv("artifactory_url")
+def user = System.getenv("artifactory_username")
+def pass = System.getenv("artifactory_password")
+
+artifacts {
+    archives jar
+}
+
+artifactory {
+    contextUrl = artifactoryUrl
+    publish {
+        contextUrl = artifactoryUrl
+        repository {
+            repoKey = repositoryKey
+            username = user
+            password = pass
+
+        }
+        defaults {
+            publications('ALL_PUBLICATIONS')
+            publishConfigs('archives', 'published')
+
+            publishBuildInfo = true
+            publishArtifacts = true
+            publishPom = true
+            publishIvy = true
+        }
+    }
+    clientConfig.setIncludeEnvVars(true)
+    clientConfig.setEnvVarsExcludePatterns('*password*,*secret*')
+    clientConfig.setEnvVarsIncludePatterns('*not-secret*')
+    clientConfig.info.addEnvironmentProperty('test.adding.dynVar', new Date().toString())
+    clientConfig.info.setBuildName(group as String)
+    clientConfig.info.setBuildNumber('' + new Random(System.currentTimeMillis()).nextInt(20000))
+    clientConfig.timeout = 600
+}
+
+artifactoryPublish {
+    skip = false
+    contextUrl = artifactoryUrl
+    publications('ALL_PUBLICATIONS')
+
+    clientConfig.publisher.repoKey = repositoryKey
+    clientConfig.publisher.username = user
+    clientConfig.publisher.password = pass
+    clientConfig.publisher.minChecksumDeploySizeKb = 10
+
+}
+
+artifactoryPublish {
+    dependsOn jar
+}
